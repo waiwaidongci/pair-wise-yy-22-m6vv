@@ -1,6 +1,6 @@
 # 文物修复档案协作平台
 
-面向博物馆修复团队的文物病害记录、修复方案、影像版本和审批归档平台。
+面向博物馆修复团队的文物病害记录、修复方案、影像版本、审批归档与**修复后稳定观察**平台。修复结束不直接回库归档：每份已批准方案建立一张稳定观察单，经观察期登记和换人复核通过、状态恢复稳定后才允许归档。
 
 ## 快速启动
 
@@ -57,6 +57,20 @@ backend/src/routes, controllers, services, models, repositories, middlewares, co
 - RelicCondition: constants/RelicCondition、types/RelicCondition、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
 - PlanApprovalStatus: constants/PlanApprovalStatus、types/PlanApprovalStatus、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
 - DamageSeverity: constants/DamageSeverity、types/DamageSeverity、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
+- ObservationStatus（OBSERVING / PENDING_REVIEW / PASSED）：
+  - 后端：constants/ObservationStatus、models/StabilityObservation、constructors/StabilityObservationDtoFactory、services/StabilityObservationService、services/observationRules、controllers/StabilityObservationController、routes/StabilityObservationRoutes、seed。
+  - 前端：constants/ObservationStatus、constants/statusText、types/ObservationStatus、types/StabilityObservation、constructors/StabilityObservationConstructor、hooks/useStabilityObservation、components/common/ObservationStatusBadge、components/common/ObservationTimeline、pages/ObservationsPage、mocks/seedData。
+- ObservationBlockReason（UNFINISHED_STEP / IMAGE_MISSING / DAMAGE_REBOUND / ENV_OUT_OF_RANGE）：
+  - 后端：constants/ObservationBlockReason、constants/EnvThreshold、services/observationRules（重算单一来源）、utils/formatters、StabilityObservationService、StabilityObservationController（错误包装）。
+  - 前端：constants/ObservationBlockReason、constants/EnvThreshold、constants/statusText、utils/observationRules（离线兜底镜像）、components/common/BlockReasonList、components/common/ObservationEntryTable、components/common/ObservationTimeline、pages/ObservationsPage。
+
+## 稳定观察台业务规则
+
+- **一张未结束单**：仅 `APPROVED` 方案可建单；同一方案存在 `OBSERVING/PENDING_REVIEW` 观察单时禁止再建（`OPEN_OBSERVATION_EXISTS`）。
+- **登记内容**：每个观察时段登记部位、起止时段、温度/湿度、外观影像和外观备注；缺影像（`ENTRY_IMAGE_REQUIRED`）或重复时段（`ENTRY_SLOT_DUPLICATED`）被拒。
+- **停在待复核并列原因**：结束观察后，存在①未完成修复步骤 ②影像缺项/时段不足 ③病害回升（时段回升标记 / 病害等级高于建单快照 / 病害重开）④温湿度越界（默认温度 15~25℃、湿度 45~60%）任一项，即停在 `PENDING_REVIEW`，原因实时重算并展示。
+- **换人复核**：复核人不得是结束观察的本人（`REVIEW_SELF_FORBIDDEN`）；原因未清除禁止通过（`REVIEW_BLOCKED`），可退回继续观察；通过后文物状态恢复 `STABLE`，方案才允许归档（`POST /api/restoration-plan/:id/archive`，否则 `PLAN_ARCHIVE_BLOCKED`）。
+- **更正作废重算**：任一步骤（`PATCH /api/restoration-step/:id`）、病害（`PATCH /api/damage-record/:id`）或影像（`PATCH /api/image-version/:id`）后来更正，相关观察单按新记录重算；若已通过，原结论立即作废（`voided=true`、版本号 +1、退回 `PENDING_REVIEW`），前后结果完整保留在 `conclusion_history` 中。
 
 ## 为什么会牵一发动全身
 

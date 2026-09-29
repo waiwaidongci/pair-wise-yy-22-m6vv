@@ -4,9 +4,11 @@ import { routes } from "./router/routes";
 import { mockData } from "./mocks/seedData";
 import { StatusBadge } from "./components/common/StatusBadge";
 import { StatCard } from "./components/common/StatCard";
+import { ObservationsPage } from "./pages/ObservationsPage";
 import "./styles.css";
 
-function Page({ name }: { name: string }) {
+function Page({ name, route }: { name: string; route: string }) {
+  if (route === "/observations") return <ObservationsPage />;
   const entities = Object.entries(mockData);
   const total = useMemo(() => entities.reduce((sum, [, rows]) => sum + rows.length, 0), [entities]);
   return <main className="page">
@@ -20,7 +22,7 @@ function Page({ name }: { name: string }) {
     <section className="metrics">
       <StatCard label="核心模型" value={entities.length} />
       <StatCard label="本地记录" value={total} />
-      <StatCard label="共享枚举" value={3} />
+      <StatCard label="共享枚举" value={4} />
     </section>
     <section className="workbench">
       <div className="panel wide">
@@ -47,7 +49,7 @@ function App() {
       <div className="brand">文物修复档案协作平台</div>
       <nav>{routes.map((route) => <button key={route.route} className={active === route.route ? "active" : ""} onClick={() => setActive(route.route)}>{route.name}</button>)}</nav>
     </aside>
-    <Page name={current?.name ?? "工作台"} />
+    <Page name={current?.name ?? "工作台"} route={current?.route ?? "/dashboard"} />
   </div>;
 }
 

@@ -1,0 +1,8 @@
+export const ENV_THRESHOLD = {
+  TEMPERATURE_MIN: 15,
+  TEMPERATURE_MAX: 25,
+  HUMIDITY_MIN: 45,
+  HUMIDITY_MAX: 60
+} as const;
+
+export const DEFAULT_EXPECTED_SLOTS = 2;
