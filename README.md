@@ -1,6 +1,6 @@
 # 文物修复档案协作平台
 
-面向博物馆修复团队的文物病害记录、修复方案、影像版本和审批归档平台。
+面向博物馆修复团队的文物病害记录、修复方案、影像版本、**修复后稳定观察**和审批归档平台。修复结束后必须在稳定观察台完成观察期登记并经换人复核，恢复稳定后才允许归档。
 
 ## 快速启动
 
@@ -57,6 +57,27 @@ backend/src/routes, controllers, services, models, repositories, middlewares, co
 - RelicCondition: constants/RelicCondition、types/RelicCondition、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
 - PlanApprovalStatus: constants/PlanApprovalStatus、types/PlanApprovalStatus、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
 - DamageSeverity: constants/DamageSeverity、types/DamageSeverity、constructors、logTemplates、errorMessages、筛选器、展示组件/控制器均有引用。
+- ObservationStatus（UNDER_OBSERVATION 观察中 / PENDING_REVIEW 待复核 / STABLE_CONFIRMED 已确认稳定）：
+  - 后端：constants/ObservationStatus、models/StabilityObservation、services/StabilityObservationService、utils/observationRules、constructors/StabilityObservationDtoFactory、repositories/StabilityObservationRepository、seed、database/init.sql。
+  - 前端：constants/ObservationStatus、types/ObservationStatus、constants/statusText、utils/formatters、constructors/StabilityObservationConstructor、components/common/ObservationStatusBadge、pages/ObservationsPage、mocks/seedData。
+- ObservationBlockReason（UNFINISHED_STEPS 有未完成步骤 / IMAGE_MISSING 影像缺项 / DAMAGE_REBOUND 病害回升 / ENV_OUT_OF_RANGE 温湿越界）：
+  - 后端：constants/ObservationBlockReason、utils/observationRules、services/StabilityObservationService、StabilityObservation 模型的 blocker_reasons 字段。
+  - 前端：constants/ObservationBlockReason、utils/observationRules、components/common/BlockerReasonPanel、pages/ObservationsPage、hooks/useObservationBlockers。
+- ObservationImageSlot（OVERALL 整体 / POSITION 部位 / DAMAGE 病害特写）：
+  - 后端：constants/ObservationImageSlot、models/ObservationCheckpoint、utils/observationRules、constructors/ObservationCheckpointDtoFactory。
+  - 前端：constants/ObservationImageSlot、types/ObservationCheckpoint、components/common/CheckpointCard、pages/ObservationsPage。
+- RestorationStepStatus（DRAFT / IN_PROGRESS / DONE / QC_REJECTED）与 DamageRecordStatus（OPEN / MONITORING / RESOLVED / REOPENED）：
+  - 后端：constants/RestorationStepStatus、constants/DamageRecordStatus、utils/observationRules、seed。
+  - 前端：constants/RestorationStepStatus、constants/DamageRecordStatus、constants/statusText、utils/formatters、pages/ObservationsPage。
+
+## 稳定观察台业务规则
+
+1. 每份**已批准**方案只允许建立一张未结束观察单（`POST /api/stability-observation`，重复建单返回 `OBSERVATION_LIMIT`）。
+2. 观察单登记观察部位、起止时段、温湿度限值；检查点登记时段、温度、湿度、外观描述和整体/部位/病害三类外观影像。
+3. 出现以下任一情况，观察单停在**待复核**并列出原因：有未完成步骤、影像缺项、病害回升（最新检查点或最新病害记录 REOPENED/等级升高）、温湿越界。
+4. 观察结束（`POST /:id/finish`）后必须**换人复核**（复核人不得为建单人，`OBSERVATION_REVIEW_SELF`）；仍有停留原因时复核通过被拦截（`OBSERVATION_BLOCKERS_PRESENT`）。
+5. 复核通过后文物恢复 STABLE，归档门禁（`GET /api/restoration-plan/:id/archive-gate`）放行，`POST /api/restoration-plan/:id/archive` 才会归档。
+6. 任一步骤、病害或影像后来更正（`PATCH /api/{restoration-step|damage-record|image-version}/:id/correction`）：原复核结论立即作废、退回待复核并按新记录重算；每个被更正字段保留前后结果（`GET /api/stability-observation/:id/revisions`），影像更正可带 `checkpoint_id`+`image_slot` 联动替换检查点影像。
 
 ## 为什么会牵一发动全身
 

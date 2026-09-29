@@ -1,1 +1,14 @@
-import { seed } from "../seed"; export const damageRecordRepository = { findAll: () => seed.damageRecord, save: (row: unknown) => row };
+import { seed } from "../seed";
+
+const rows = seed.damageRecord as unknown as Record<string, unknown>[];
+
+export const damageRecordRepository = {
+  findAll: () => rows,
+  save: (row: unknown) => row,
+  findById: (id: number) => rows.find((row) => Number(row.id) === id),
+  update: (id: number, patch: Record<string, unknown>) => {
+    const target = rows.find((row) => Number(row.id) === id);
+    if (target) Object.assign(target, patch);
+    return target;
+  }
+};
